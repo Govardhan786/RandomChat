@@ -1,78 +1,47 @@
-const socket = io();
-let selectedUser = null;
-const messageSound = document.getElementById('messageSound');
+// Connect to the Socket.IO server hosted on Vercel
+const socket = io('https://random-chat-cro4f15u7-govardhans-projects.vercel.app/'); // Replace with your Vercel app URL
 
-// Prompt user for username
-const username = prompt("Enter your username:");
-socket.emit('join', username);
+// Function to handle joining the chat
+document.getElementById('join').onclick = () => {
+    const username = document.getElementById('username').value;
+    socket.emit('join', username); // Emit join event with the username
+};
 
-// Display users
-socket.on('userList', (userList) => {
-    const usersUl = document.getElementById('users');
-    usersUl.innerHTML = '';
-    userList.forEach((user) => {
-        const li = document.createElement('li');
-        li.textContent = user;
-        li.addEventListener('click', () => {
-            selectedUser = user;
-            alert(`Private message mode: ${user}`);
-        });
-        usersUl.appendChild(li);
+// Listen for the updated user list
+socket.on('userList', (users) => {
+    console.log('Current users:', users); // Log the current user list
+    const userListDiv = document.getElementById('userList');
+    userListDiv.innerHTML = ''; // Clear the existing user list
+    users.forEach(user => {
+        userListDiv.innerHTML += `<p>${user}</p>`; // Add each user to the list
     });
 });
 
-// Display messages
-socket.on('message', (message) => {
-    displayMessage(`${message.username}: ${message.text}`);
-    messageSound.play(); // Play sound on new message
+// Listen for incoming messages
+socket.on('message', (data) => {
+    const messagesDiv = document.getElementById('messages');
+    messagesDiv.innerHTML += `<p><strong>${data.username}:</strong> ${data.text}</p>`; // Display messages
 });
 
-// Display private messages
-socket.on('privateMessage', (message) => {
-    displayMessage(`(Private) ${message.from}: ${message.text}`);
-    messageSound.play(); // Play sound on new message
-});
+// Function to send messages
+document.getElementById('send').onclick = () => {
+    const messageInput = document.getElementById('message');
+    const message = messageInput.value;
+    socket.emit('sendMessage', message); // Emit message event
+    messageInput.value = ''; // Clear the input after sending
+};
 
-// Typing indicator
-let typingTimeout;
-document.getElementById('messageInput').addEventListener('input', () => {
-    clearTimeout(typingTimeout);
-    socket.emit('typing', username);
-    document.getElementById('typingIndicator').style.display = 'block';
-    typingTimeout = setTimeout(() => {
-        document.getElementById('typingIndicator').style.display = 'none';
-    }, 1000);
-});
+// Function to send private messages (optional)
+document.getElementById('sendPrivate').onclick = () => {
+    const recipient = document.getElementById('recipient').value;
+    const privateMessageInput = document.getElementById('privateMessage');
+    const privateMessage = privateMessageInput.value;
+    socket.emit('privateMessage', { to: recipient, message: privateMessage }); // Emit private message event
+    privateMessageInput.value = ''; // Clear the input after sending
+};
 
-// Receive typing indication
-socket.on('typing', (username) => {
-    document.getElementById('typingIndicator').textContent = `${username} is typing...`;
+// Optionally handle receiving private messages (not displayed in this example)
+socket.on('privateMessage', (data) => {
+    const messagesDiv = document.getElementById('messages');
+    messagesDiv.innerHTML += `<p><strong>${data.from} (private):</strong> ${data.text}</p>`; // Display private messages
 });
-
-// Send a group message
-document.getElementById('sendButton').addEventListener('click', () => {
-    const message = document.getElementById('messageInput').value;
-    socket.emit('sendMessage', message);
-    document.getElementById('messageInput').value = '';
-});
-
-// Send a private message
-document.getElementById('privateButton').addEventListener('click', () => {
-    if (selectedUser) {
-        const message = document.getElementById('messageInput').value;
-        socket.emit('privateMessage', { to: selectedUser, message });
-        displayMessage(`(You to ${selectedUser}): ${message}`);
-        document.getElementById('messageInput').value = '';
-    } else {
-        alert('Select a user for private messaging!');
-    }
-});
-
-// Helper function to display messages
-function displayMessage(message) {
-    const chatMessages = document.getElementById('chatMessages');
-    const messageDiv = document.createElement('div');
-    messageDiv.textContent = message;
-    chatMessages.appendChild(messageDiv);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-}
