@@ -1,15 +1,15 @@
 const express = require('express');
 const http = require('http');
-const socket = io({ path: '/socket.io/socket.io.js' });
+const socketIO = require('socket.io'); // Correctly import socket.io
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIO(server);
+const io = socketIO(server); // Initialize Socket.IO with the server
 
 // Store users
 let users = {};
 
-// Serve the static files
+// Serve static files from the public directory
 app.use(express.static('public'));
 
 // Listen for connections
